@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420"
+     role="img" aria-labelledby="wf-title wf-desc">
+  <title id="wf-title">bilibili-to-wiki 完整工作流</title>
+  <desc id="wf-desc">六步流程：抓取字幕 → 术语勘误 → 命名入库 → 消化 digest → 反哺 glossary → 重建图谱，全程本地 Markdown。</desc>
+
+  <defs>
+    <linearGradient id="wf-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#161b22"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="420" rx="26" fill="url(#wf-bg)"/>
+  <text x="64" y="58" font-family="Segoe UI, PingFang SC, sans-serif" font-size="30" font-weight="700" fill="#f0f6fc">完整工作流</text>
+  <text x="64" y="86" font-family="PingFang SC, Segoe UI, sans-serif" font-size="17" fill="#8b949e">从 B 站视频到知识图谱：pip install 之外全程自动</text>
+
+  <!-- 六节点流程（3×2 网格，蛇形线连接） -->
+  <g font-family="PingFang SC, Segoe UI, sans-serif">
+    <!-- 步骤1 -->
+    <g>
+      <rect x="64" y="112" rx="16" width="330" height="120" fill="#161b22" stroke="#fb7299" stroke-width="1.5"/>
+      <text x="90" y="146" font-family="SFMono-Regular, Menlo, monospace" font-size="16" fill="#fb7299">STEP 1</text>
+      <text x="90" y="180" font-size="21" font-weight="600" fill="#e6edf3">抓取字幕</text>
+      <text x="90" y="208" font-size="16" fill="#8b949e">bili.py run &lt;BV号&gt;</text>
+    </g>
+    <!-- 步骤2 -->
+    <g>
+      <rect x="436" y="112" rx="16" width="330" height="120" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="462" y="146" font-family="SFMono-Regular, Menlo, monospace" font-size="16" fill="#58a6ff">STEP 2</text>
+      <text x="462" y="180" font-size="21" font-weight="600" fill="#e6edf3">术语勘误</text>
+      <text x="462" y="208" font-size="16" fill="#8b949e">glossary.py clean</text>
+      <text x="462" y="228" font-size="14" fill="#7ee787">识别错误→修正 · 存疑→登记</text>
+    </g>
+    <!-- 步骤3 -->
+    <g>
+      <rect x="808" y="112" rx="16" width="328" height="120" fill="#161b22" stroke="#f0f6fc" stroke-width="1.5"/>
+      <text x="834" y="146" font-family="SFMono-Regular, Menlo, monospace" font-size="16" fill="#f0f6fc">STEP 3</text>
+      <text x="834" y="180" font-size="21" font-weight="600" fill="#e6edf3">命名入库</text>
+      <text x="834" y="208" font-size="16" fill="#8b949e">raw/notes/ 存档</text>
+    </g>
+    <!-- 步骤4（下一行，蛇形回左） -->
+    <g>
+      <rect x="808" y="268" rx="16" width="328" height="120" fill="#161b22" stroke="#7ee787" stroke-width="1.5"/>
+      <text x="834" y="302" font-family="SFMono-Regular, Menlo, monospace" font-size="16" fill="#7ee787">STEP 4</text>
+      <text x="834" y="336" font-size="21" font-weight="600" fill="#e6edf3">消化入库</text>
+      <text x="834" y="364" font-size="16" fill="#8b949e">digest → wiki 页面</text>
+      <text x="834" y="384" font-size="14" fill="#8b949e">cache HIT 秒级复用</text>
+    </g>
+    <!-- 步骤5 -->
+    <g>
+      <rect x="436" y="268" rx="16" width="330" height="120" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="462" y="302" font-family="SFMono-Regular, Menlo, monospace" font-size="16" fill="#58a6ff">STEP 5</text>
+      <text x="462" y="336" font-size="21" font-weight="600" fill="#e6edf3">反哺术语表</text>
+      <text x="462" y="364" font-size="16" fill="#8b949e">absorb → glossary</text>
+      <text x="462" y="384" font-size="14" fill="#7ee787">库→表·表→库 双闭环</text>
+    </g>
+    <!-- 步骤6 -->
+    <g>
+      <rect x="64" y="268" rx="16" width="330" height="120" fill="#161b22" stroke="#fb7299" stroke-width="1.5"/>
+      <text x="90" y="302" font-family="SFMono-Regular, Menlo, monospace" font-size="16" fill="#fb7299">STEP 6</text>
+      <text x="90" y="336" font-size="21" font-weight="600" fill="#e6edf3">重建图谱</text>
+      <text x="90" y="364" font-size="16" fill="#8b949e">graph.html 离线可看</text>
+      <text x="90" y="384" font-size="14" fill="#8b949e">nodes 36 · edges 84</text>
+    </g>
+  </g>
+
+  <!-- 蛇形箭头连接 -->
+  <g stroke="#30363d" stroke-width="3" fill="none">
+    <path d="M394 172H436" marker-end="url(#arrow)"/>
+    <path d="M766 172H808"/>
+    <path d="M972 232V268"/>
+    <path d="M808 328H766" />
+    <path d="M436 328H394"/>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0 0L8 4L0 8Z" fill="#58a6ff"/>
+    </marker>
+  </defs>
+
+  <!-- 底部说明 -->
+  <text x="64" y="410" font-family="PingFang SC, Segoe UI, sans-serif" font-size="15" fill="#8b949e">
+    产物全部是本地 Markdown —— Obsidian 可直接打开，git 可版本追溯
+  </text>
+</svg>

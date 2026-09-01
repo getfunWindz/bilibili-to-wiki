@@ -1,96 +1,101 @@
 # bilibili-to-wiki
 
-> **B 站视频 → LLM Wiki 知识库桥接 Skill**：把 B 站视频作为素材消化进个人 LLM Wiki 知识库的编排 Skill。
->
-> 它只做编排（不重复实现功能）：bilibili-learn 抓取字幕 → glossary 术语勘误 → llm-wiki digest 入库 → 反哺（absorb）→ 重建知识图谱。
+<p align="center">
+  <img src="./assets/readme/hero.svg" width="100%" alt="B站视频一键进入 LLM Wiki 知识库：抓取字幕、术语勘误、消化入库、图谱重建">
+</p>
 
-**版本**：1.0.0 ｜ 作者：getfunWindz ｜ 许可证：MIT
+**一句话**：把 B 站视频变成持续积累、可查询的 LLM Wiki 知识库素材——抓取、勘误、消化、反哺、图谱五步全自动，全程本地 Markdown。
 
 ---
 
-## 为什么需要这个 Skill
+## 它解决什么问题
 
-| 问题 | 说明 |
+| 痛点 | 说明 |
 |------|------|
-| 跨会话失效 | bilibili-learn 与 llm-wiki 是两个独立 Skill，**编排流程只存在于单次对话上下文**。换新会话后，agent 不知道「B 站视频 → 知识库」的完整流程 |
-| 触发词重叠 | 用户说「把这个视频消化进知识库」时，可能被 bilibili-learn（只会总结出报告）或 llm-wiki（处理不了 B 站链接）误接管 |
-| 字幕噪声污染 | B 站官方字幕 / Whisper 转写存在识别错误（如 `ATHROPIC→Anthropic`、`grab→grep`），不校验就会把错字灌进知识库 |
+| **跨会话失效** | 手动把「B站视频→知识库」的流程告诉 agent 只对当次对话有效，换会话就丢了 |
+| **触发词重叠** | 说「把视频入库」时，bilibili-learn（只会出报告）或 llm-wiki（不会抓 B 站）可能误接管 |
+| **字幕噪声** | B 站字幕/Whisper 转写有识别错误（`ATHROPIC→Anthropic`），不校验会污染知识库 |
 
-## 功能概览
+---
 
-- **抓取**：调用 bilibili-learn 的 `bili.py run`（字幕优先，Whisper 兜底）
-- **勘误**：调用 bilibili-learn 的 `glossary.py clean`，按 `glossary.json._aliases` 替换已知识别错误；未命中的存疑词走人工确认
-- **入库**：corrected 稿复制到知识库 `raw/notes/`（带 front matter 元信息），agent 命名
-- **消化**：按 llm-wiki ingest 工作流执行（Step1 结构化分析 → 页面生成 → index/log 更新）
-- **反哺**：`glossary.py absorb` 把知识库实体页/主题页新术语沉淀回术语表（双向闭环）
-- **图谱**：重建 `wiki/knowledge-graph.html` 离线交互图谱
+## 真实证明
 
-## 目录结构
+<p align="center">
+  <img src="./assets/readme/workflow.svg" width="100%" alt="完整工作流：抓取字幕→术语勘误→命名入库→消化→反哺→图谱">
+</p>
 
-```
-bilibili-to-wiki/
-├── SKILL.md                    # Skill 主文件（触发/排除/工作流/错误分支/输出规范）
-└── scripts/
-    └── ingest-pipeline.sh      # 主编排脚本：抓取+勘误（命名与 digest 由 agent 执行）
-```
+- **勘误是真实的**：`glossary.json._aliases` 内存放着本仓库实测的 4 条映射（ATHROPIC→Anthropic / grab→grep / AH 的目录→agent 的目录 / easy deset→Easy Dataset，最后一条由「B站模糊搜索→同一UP主新视频」联想确认）
+- **复用是真的**：同一素材二次 ingest 走 `cache HIT` 短路——秒级跳过，`wiki` 页面零重复、零 LLM 调用
+- **产物可审计**：全部页面是带 front matter 的 Markdown + `graph-data.json` + 离线 HTML 图谱
 
-## 依赖（按编排顺序）
+---
 
-| 依赖 | 位置 | 职责 |
-|------|------|------|
-| **bilibili-learn** | `~/.pi/agent/skills/bilibili-learn/` | B 站内容获取（`bili.py run`）、glossary 术语库（`glossary.py` alias/clean/absorb） |
-| **llm-wiki** | `~/.pi/agent/skills/llm-wiki/` | 知识库（`init-wiki.sh`、`cache.sh`、`validate-step1.sh`、`create-source-page.sh`、`build-graph-data/html.sh`） |
-| **jq** | PATH | 图谱构建脚本依赖 |
-| **Node.js** | 系统 | llm-wiki graph-engine 构建（一次性 `npm run build -w @llm-wiki/graph-engine`） |
+## 如何使用
 
-## 安装
+### 前置
 
 ```bash
-# 1. 克隆本仓库到 pi 的 skills 目录
+# 克隆本 skill 与两个依赖 skill
 git clone https://github.com/getfunWindz/bilibili-to-wiki.git ~/.pi/agent/skills/bilibili-to-wiki
 
-# 2. 确保两个依赖 skill 已安装（见上方「依赖」表）
-
-# 3. 确保知识库已初始化（~/.llm-wiki-path 存在）
-cat ~/.llm-wiki-path   # 应输出知识库路径，如 C:\Users\xxx\llm-wiki-kb
+# 知识库需已初始化（llm-wiki skill 的 init 一步完成）
+cat ~/.llm-wiki-path   # 应输出知识库路径，如 C:\Users\xx\llm-wiki-kb
 ```
 
-## 使用方法
+依赖：`bilibili-learn`（抓取 + glossary）、`llm-wiki`（digest + 图谱）、`jq`、`Node.js`。
 
-在 pi（或任何 Agent Skills 兼容的 CLI）中说：
+### 使用（pi 里说一句）
 
 ```
 「把 BV1RkFAznESD 加进知识库」
 「消化这个 B 站视频」
-「把这个视频入库：<链接>」
 ```
 
-### 编排流程（SKILL.md 工作流 A 主线）
+### 手动路径
 
-1. `ingest-pipeline.sh <视频>` → bilibili-learn 抓取字幕 + glossary 勘误（输出 corrected 稿）
-2. agent 复制 corrected 稿到 `$KB/raw/notes/<日期>-<标题>.md`（含 front matter）
-3. `cache.sh check` → **MISS**：走 ingest（Step1 JSON → validate → source/entity/topic 页 → index/log）｜ **HIT**：直接复用，零 LLM 调用
-4. `glossary.py absorb $KB/wiki` 反哺新术语
-5. `build-graph-data.sh` + `build-graph-html.sh` 重建图谱
+```bash
+bash scripts/ingest-pipeline.sh <视频链接/BV号>   # 抓取+勘误（输出 corrected 稿）
+# 然后 agent 执行：复制到 raw/notes/ → llm-wiki digest → absorb → 重建图谱
+```
 
-### 两种使用形态
+---
+
+## 工作流详解（为什么这样设计）
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  ①抓取  bili.py run（字幕优先，Whisper 兜底）            │
+│  ②勘误  glossary.py clean（_aliases 替换 + 存疑登记）     │
+│  ③入库  复制 corrected 稿 → raw/notes/（带 front matter）│
+│  ④消化  cache check？ MISS→digest（Step1→页面）           │
+│         │                    │                          │
+│         │                    └ HIT→复用（零 LLM 调用）   │
+│  ⑤反哺  glossary.py absorb（实体/主题新术语 → 术语表）    │
+│  ⑥图谱  build-graph-data.sh + build-graph-html.sh        │
+└─────────────────────────────────────────────────────────┘
+```
+
+**三种编排形态**：
 
 | 形态 | 触发 | 说明 |
 |------|------|------|
-| **全新流程** | 素材第一次 digest | 完整链路（抓取→勘误→入库→消化→反哺→图谱） |
-| **复用流程** | 素材已 digest 过 | cache HIT 短路，秒级跳过，零 LLM 调用 |
+| 全新流程 | 素材首次 digest | 完整六步 |
+| 复用流程 | 素材已 digest | cache HIT 短路，秒级 |
+| 批量 | 收藏夹 `favs-scan` → 逐个走全新 | 每 3 个暂停确认 |
 
-## Glossary 双向闭环设计
+---
+
+## Glossary 双向闭环（设计核心）
 
 ```
-表 → 库（正用）：ingest 前 glossary.py clean——替换已知勘误，未命中走 LLM/人工判断
+表 → 库（正用）：ingest 前 glossary.py clean —— 替换已知识别错误
                     ▲                    │
-           （echo 回填 correct）   （新术语/新勘误）
+         （回填 correct 格式）    （新术语 / 新勘误）
                     │                    ▼
-库 → 表（反哺）：digest 后 glossary.py absorb——实体页/主题页新概念沉淀回术语表
+库 → 表（反哺）：digest 后 glossary.py absorb —— 实体页新概念沉淀回术语表
 ```
 
-`glossary.json` 扩展结构（向后兼容，旧术语条目不变）：
+`glossary.json` 扩展结构（向后兼容，旧术语不变）：
 
 ```json
 {
@@ -102,7 +107,7 @@ cat ~/.llm-wiki-path   # 应输出知识库路径，如 C:\Users\xxx\llm-wiki-kb
 }
 ```
 
-`type` 取值：`stt_error`（语音/字幕识别错误）｜ `naming`（译名/别名统一）｜ `uncertain`（存疑，correct=null）
+`type`：`stt_error`（语音/字幕识别错误）| `naming`（译名统一）| `uncertain`（存疑，correct=null）
 
 ### glossary.py 命令
 
@@ -112,21 +117,36 @@ add <术语> <解释>                沉淀术语（已有不覆盖）
 check <报告.md> <subtitle.txt>   注释/覆盖校验
 alias <错误> <标准>              登记勘误
 aliases                          列出勘误映射
-clean <文件> [--out <dst>]       按勘误映射替换（存疑项仅收集不替换）
-absorb <wiki目录> [--dry]        反哺：扫描实体/主题页沉淀新术语
+clean <文件> [--out <dst>]       按勘误映射替换
+absorb <wiki目录> [--dry]        反哺沉淀新术语
 ```
 
-## 已知实践（2026-09-01 实测）
+---
 
-- **勘误示例**：`ATHROPIC→Anthropic`、`grab→grep`、`AH 的目录→agent 的目录`、`easy deset→Easy Dataset`（经 B 站搜索链验证：同一 UP 主 code秘密花园 有《Easy Dataset 最新更新解读》BV1Rq1hBtEJa）
-- **复用验证**：cache HIT 短路生效——重跑同素材秒级跳过，wiki 页面零重复
-- **易错点**：桥接脚本**不要自己猜文件名**（曾出现 slug 截断为 `RA.md` 的 bug，已改为 agent 命名）；`--no-whisper` 空参数会破坏参数解析（已修）
+## 边界与已知实践
+
+- **适用**：个人知识库、资料持续增长、B站视频作为学习素材的场景
+- **不适用**：一次性问答（不需要整套治理）、大规模低价值语料粗筛（应先 RAG）
+- **已知坑（已在代码中修复）**：① 桥接脚本不要自己猜文件名（曾截断成 `RA.md`）② `--no-whisper` 空参数会破坏参数解析
+- **存疑机制**：不确定的术语**不自动替换**，进 `uncertain` 队列人工确认——不过度自动化
+
+## 目录结构
+
+```
+bilibili-to-wiki/
+├── SKILL.md                     # Skill 主文件（触发/排除/工作流/错误分支表）
+├── README.md                    # 本文件
+├── assets/readme/               # 视觉资产（hero / workflow SVG）
+└── scripts/
+    └── ingest-pipeline.sh       # 抓取+勘误（命名与 digest 由 agent 执行）
+```
 
 ## 相关链接
 
-- [bilibili-learn](https://github.com/sdyckjq-lab/llm-wiki-skill)（参考：llm-wiki skill，Karpathy 方法论）｜ bilibili-learn：B 站学习视频 skill（本仓库作者的本地开发项目）
-- Karpathy 方法论：[llm-wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
+- Karpathy [LLM Wiki 方法论 gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
+- [sdyckjq-lab/llm-wiki-skill](https://github.com/sdyckjq-lab/llm-wiki-skill)（知识库引擎，本 skill 的依赖）
+- 本仓库依赖：`bilibili-learn`（作者自研 B 站学习视频 skill，含 glossary）
 
-## 许可证
+## License
 
-MIT
+MIT © getfunWindz
